@@ -14,10 +14,10 @@ Thay `xx` bằng mã nhóm được giao; không tự mặc định mã nhóm l�
 
 | Người | Vai theo đề | Component chịu trách nhiệm cuối | Phần việc phải bàn giao |
 | --- | --- | --- | --- |
-| **Trần Nguyễn Trí Dũng** (`bananayass`) | Kiến trúc sư trưởng | `ops_labor`, `licenses`, `contingency`, dòng `TOTAL` | Giả định tổng, sơ đồ/luồng đầu cuối, ghép slide, ghép báo giá, tối ưu chi phí, điều phối bảo vệ |
-| **Kiệt** (`kayendev`) | Model serving | `llm`, `embedding`, `gateway` | Model theo 5 cấp tác vụ, routing, sizing token/GPU/API, so sánh API–tự host–hybrid, chất lượng và giá inference |
-| **Phong** (`phong123-ai`) | Data và workspace | `connectors`, `database`, `vector_db`, `object_storage`, `cache_queue` | Kết nối SaaS, RAG lọc theo quyền, workspace riêng, storage, queue agent và giá dữ liệu |
-| **Trường Bảo** (`zewolkt3939`) | Vai gộp: sandbox, bảo mật, governance **và** cloud, HA, vận hành | `sandbox`, `authn`, `authz`, `secrets_kms`, `governance`, `compute`, `load_balancer`, `network`, `backup_dr`, `monitoring`, `cicd` | Cloud/region, sandbox, SSO/OAuth, guardrail/DLP/audit, HA/DR, staging, monitoring và giá vận hành |
+| **Trần Nguyễn Trí Dũng** (`2A202602784`, `@bananayass`) | Kiến trúc sư trưởng | `ops_labor`, `licenses`, `contingency`, dòng `TOTAL` | Giả định tổng, sơ đồ/luồng đầu cuối, ghép slide, ghép báo giá, tối ưu chi phí, điều phối bảo vệ |
+| **Hồ Đình Tuấn Kiệt** (`2A202602785`, `@Kayen-dev`) | Model serving | `llm`, `embedding`, `gateway` | Model theo 5 cấp tác vụ, routing, sizing token/GPU/API, so sánh API–tự host–hybrid, chất lượng và giá inference |
+| **Nguyễn Duy Phong** (`2A202602834`, `@DuyPhong123-ai`) | Data và workspace | `connectors`, `database`, `vector_db`, `object_storage`, `cache_queue` | Kết nối SaaS, RAG lọc theo quyền, workspace riêng, storage, queue agent và giá dữ liệu |
+| **Nguyễn Trường Bảo** (`2A202602540`, `@zewolkt3939`) | Vai gộp: sandbox, bảo mật, governance **và** cloud, HA, vận hành | `sandbox`, `authn`, `authz`, `secrets_kms`, `governance`, `compute`, `load_balancer`, `network`, `backup_dr`, `monitoring`, `cicd` | Cloud/region, sandbox, SSO/OAuth, guardrail/DLP/audit, HA/DR, staging, monitoring và giá vận hành |
 
 Theo đề, nhóm 4 người gộp hai vai cuối. Bảo chốt tính đúng của các component thuộc vai gộp; ba người còn lại hỗ trợ chuẩn bị số liệu và bằng chứng theo bảng dưới đây để các phần có thể làm song song.
 

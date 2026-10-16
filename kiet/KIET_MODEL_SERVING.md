@@ -1,4 +1,4 @@
-# Bàn giao của Tuấn Kiệt — model serving VBot
+# Bàn giao của Hồ Đình Tuấn Kiệt — model serving VBot
 
 Theo [đề bài](../vbot-capstone.html) và checkpoint K1–K6 trong [TEAMMATE_PLAN.md](../TEAMMATE_PLAN.md). Đây chỉ là phần chi phí của Kiệt để Dũng ghép vào báo giá toàn hệ thống, **không phải tổng dự án**.
 

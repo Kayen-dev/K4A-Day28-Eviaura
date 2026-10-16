@@ -1,4 +1,4 @@
-# Phần bàn giao của Trường Bảo
+# Phần bàn giao của Nguyễn Trường Bảo
 
 Ngày soạn: 16/10/2026. Nguồn yêu cầu: [đề gốc](../vbot-capstone.html) và [phân công](../TEAMMATE_PLAN.md).
 
