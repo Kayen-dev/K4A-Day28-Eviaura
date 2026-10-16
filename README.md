@@ -13,6 +13,8 @@
 
 ## Tổng quan
 
+Phần chuẩn bị của Trường Bảo: [thiết kế bảo mật/sandbox, HA/vận hành, sizing/chi phí và nội dung slide 8–10](./bao/README.md). Đây là bản đề xuất chờ nhóm xác nhận cloud, tải và bằng chứng giá.
+
 Bài capstone yêu cầu thiết kế **VBot Workplace** — trợ lý AI văn phòng nội bộ chạy trên cloud, kết nối Google Workspace, Microsoft 365/Outlook, Notion, Jira và Confluence.
 
 Mục tiêu là xây dựng kiến trúc production cho **2.000 người dùng hoạt động mỗi ngày (DAU)**, giữ chất lượng và các yêu cầu vận hành/bảo mật, đồng thời đạt **hóa đơn hạ tầng hàng tháng thấp nhất** trong các nhóm hợp lệ.

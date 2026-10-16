@@ -1,0 +1,2 @@
+Component	Ý nghĩa	Ghi chú	Chi phí/tháng (USD)	Bằng chứng
+ops_labor	Trực vận hành và diễn tập khôi phục	Giả định phân bổ đội trực chung: 40 giờ hoạt động/tháng x 20 USD/giờ = 800 USD/tháng cho xử lý sự cố và diễn tập restore; đội hiện hữu theo dõi 220 giờ hành chính, không bố trí nhân sự riêng; phải xác nhận lịch trực, đơn giá và cộng phụ cấp ngoài giờ nếu cần để đạt RTO 4 giờ	800.00	NA
