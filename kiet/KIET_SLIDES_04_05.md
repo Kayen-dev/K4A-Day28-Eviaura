@@ -1,4 +1,4 @@
-# Nội dung slide 4–5 — Tuấn Kiệt
+# Nội dung slide 4–5 — Hồ Đình Tuấn Kiệt
 
 Các số sau là **ước lượng**, dựa trên 2.000 DAU, **giả định chưa chốt 10 request/người/ngày**, 22 ngày × 10 giờ hành chính (T2–T6, 08:00–18:00 GMT+7). Chi tiết: [KIET_MODEL_SERVING.md](./KIET_MODEL_SERVING.md).
 

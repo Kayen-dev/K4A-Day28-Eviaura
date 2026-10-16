@@ -15,7 +15,7 @@
 
 ## Tổng quan
 
-Phần chuẩn bị của Trường Bảo: [thiết kế bảo mật/sandbox, HA/vận hành, sizing/chi phí và nội dung slide 8–10](./bao/README.md). Đây là bản đề xuất chờ nhóm xác nhận cloud, tải và bằng chứng giá.
+Phần chuẩn bị của Nguyễn Trường Bảo: [thiết kế bảo mật/sandbox, HA/vận hành, sizing/chi phí và nội dung slide 8–10](./bao/README.md). Đây là bản đề xuất chờ nhóm xác nhận cloud, tải và bằng chứng giá.
 
 Bài capstone yêu cầu thiết kế **VBot Workplace** — trợ lý AI văn phòng nội bộ chạy trên cloud, kết nối Google Workspace, Microsoft 365/Outlook, Notion, Jira và Confluence.
 

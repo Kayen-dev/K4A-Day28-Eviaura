@@ -1,4 +1,4 @@
-# Phần bàn giao của Tuấn Kiệt
+# Phần bàn giao của Hồ Đình Tuấn Kiệt
 
 Tài liệu thuộc vai **model serving** trong [kế hoạch nhóm](../TEAMMATE_PLAN.md), dựa trên [đề gốc](../vbot-capstone.html).
 
