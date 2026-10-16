@@ -1,5 +1,17 @@
 # Kiểm tra gói thiết kế AWS
 
+## Bản hiện tại: Singapore, 16/10/2026
+
+`G03_baogia.xlsx` và `Eviaura_baogia.xlsx` hiện cùng nội dung Singapore, TOTAL **6.022,78 USD/tháng**. Validator gốc của lab: **PASS**, 27 dòng, đủ 19 component, tổng khớp, 0 lỗi. Còn 1 cảnh báo Sonnet chiếm khoảng 64% tổng. Công thức từng dòng và TOTAL đã recalculate, không thấy lỗi công thức. Đã render và xem các vùng thay đổi của cả ba sheet, chưa mở kiểm tra bằng Excel native.
+
+Billable rates lấy từ AWS Price List theo SKU và versioned URL, lưu `pricing-ap-southeast-1.json`. So với bản trước, hạ tầng không chỉ đổi nhãn region: S3, API, DynamoDB, log ingest, provisioned concurrency, egress và model rates đã tính lại. Nova Lite dùng APAC, Sonnet dùng Global, Stable Image Core dùng Oregon thay Nova Canvas EOL. Không khẳng định Singapore-only inference/residency. Xem `docs/REGION_SINGAPORE.md`.
+
+Các kiểm tra IaC bên dưới là **US reference trước đó**, không chứng minh template deploy được ở Singapore. Bản báo giá và validation US nguyên gốc đã lưu tại `archive/us-east-1/`. Các con số 6.331,27 USD bên dưới là lịch sử, không dùng nộp.
+
+Slide `G03_slide.pptx`: 15 trang, 16:9, 85.220 bytes, speaker notes đủ 420 giây. Đã kiểm tra cấu trúc, geometry/font và import lại bằng artifact-tool, không có findings. Đã render và xem cả 15 slide, sửa hướng mũi tên rồi xem lại các slide bị ảnh hưởng. TOTAL trên slide 1/12 khớp XLSX. `submission-consistency.json` ghi checksum và đối chiếu chéo. Chưa kiểm tra trong PowerPoint native.
+
+## Kết quả ban đầu của US reference
+
 Ngày kiểm tra: 16/10/2026. Không deploy stack, không gọi Bedrock và không truy cập tài khoản AWS.
 
 | Kiểm tra | Kết quả |

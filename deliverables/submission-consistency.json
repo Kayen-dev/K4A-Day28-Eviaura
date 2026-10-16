@@ -1,0 +1,11 @@
+{
+  "region": "ap-southeast-1",
+  "total_usd": 6022.78,
+  "quote_pass": true,
+  "selected_rates": 43,
+  "slides": 15,
+  "pptx_bytes": 85220,
+  "xlsx_sha256": "9521cbe5e976d6499f9b7035f771aae5c83ce2290aabff8568ab22c1bffc91a6",
+  "pptx_sha256": "57328d36c9eace089025ae1b6acf263cb5ec8f44726bbbc51effad6f1f9aaf46",
+  "note": "Cross-file consistency check; no native Excel/PowerPoint or live AWS validation."
+}

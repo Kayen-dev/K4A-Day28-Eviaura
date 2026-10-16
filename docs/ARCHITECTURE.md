@@ -1,5 +1,7 @@
 # VBot Workplace trên AWS — Eviaura
 
+> Cập nhật 16/10/2026: báo giá hiện tại chuyển sang `ap-southeast-1`, tổng **6.022,78 USD/tháng**. Các quyết định US trong tài liệu này là kiến trúc tham chiếu ban đầu. Xem [bổ sung Singapore, model routing và EOL](REGION_SINGAPORE.md) trước khi dùng báo giá hoặc triển khai.
+
 Thiết kế cho 2.000 DAU theo `vbot-capstone.html`, ngày lập 16/10/2026. Chọn **serverless + Bedrock trả theo sử dụng**, production và staging riêng. Mục tiêu là giảm chi phí trong các phương án đáp ứng H1–H8; chưa có benchmark để tuyên bố đây là phương án rẻ nhất hợp lệ.
 
 Phạm vi đã làm: kiến trúc, dự toán có thể tái tạo, XLSX đúng cấu trúc đề, CloudFormation mục tiêu và bộ kiểm tra cục bộ. Repo ban đầu chỉ có đề bài; **chưa có ứng dụng VBot**, OAuth registrations, corpus hay tập eval. Template nhận ZIP ứng dụng đã review từ S3, không thay thế phần phát triển ứng dụng. Chưa tạo tài nguyên AWS hoặc gọi model tính phí.

@@ -6,6 +6,9 @@ import {Presentation, PresentationFile, FileBlob} from '../.tools/node_modules/@
 const root=path.resolve('.');
 const skill='C:/Users/ASUS/.codex/plugins/cache/openai-primary-runtime/presentations/26.1013.11914/skills/presentations';
 const runtime='C:/Users/ASUS/.cache/codex-runtimes/codex-primary-runtime/dependencies';
+process.env.RUNTIME_NODE_MODULES=path.join(runtime,'node/node_modules');
+process.env.RUNTIME_NODE=path.join(runtime,'node/bin/node.exe');
+process.env.RUNTIME_PYTHON=path.join(runtime,'python/python.exe');
 const build=path.join(root,'.tools/slides');
 await fs.mkdir(build,{recursive:true});
 await fs.mkdir(path.join(root,'deliverables'),{recursive:true});
@@ -29,7 +32,7 @@ function text(s,content,x,y,w,h,size=24,color=C.ink,bold=false,align='left'){
 }
 function line(s,x,y,w,h=2,color=C.line){return rect(s,x,y,w,h,color);}
 function arrow(s,a,b,from='right',to='left',color=C.teal){
- return s.shapes.connect(a,b,{kind:'straight',fromSide:from,toSide:to,line:{fill:color,width:2,style:'solid'},head:{type:'triangle',width:'sm',length:'sm'}});
+ return s.shapes.connect(a,b,{kind:'straight',fromSide:from,toSide:to,line:{fill:color,width:2,style:'solid'},tail:{type:'triangle',width:'sm',length:'sm'}});
 }
 function slide(title,notes,sources=[],dark=false){
  const s=p.slides.add();s.background.fill=dark?C.navy:C.white;
@@ -83,13 +86,13 @@ function node(s,code,label,x,y,w=220,h=78){
 // 03
 {
  const s=slide('Dung lượng và tác vụ nặng được tính riêng','Giá chính tính đủ quota 10 GB cho 2.000 nhân viên, không giả định mỗi người mới dùng vài MB. Chỉ một phần tài liệu được index theo nhu cầu và quyền nguồn. Sandbox và ảnh cũng có volume riêng. Staging dùng khoảng 5% lượt model và compute, có dữ liệu riêng.',[m.sources.s3,m.sources.agentcore]);
- table(s,[['Hạng mục','Giả định tháng'],['Workspace và KB','20.000 GB quota + 200 GB KB + 100 GB staging'],['Vector và embedding','1 triệu chunk, 1.024 chiều, 120M token embedding'],['Sandbox','35.200 session × 120 giây, 1 active vCPU + 4 GB'],['Sinh ảnh','3.520 ảnh, 1.024 × 1.024 standard'],['Connector và egress','1 triệu call, 300 GB internet outbound'],['Dữ liệu và audit','50 GB state, 20 GB audit mới/tháng, giữ 12 tháng']],56,163,1168,379,[340,828],23);
+ table(s,[['Hạng mục','Giả định tháng'],['Workspace và KB','20.000 GB quota + 200 GB KB + 100 GB staging'],['Vector và embedding','1 triệu chunk, 1.024 chiều, 120M token embedding'],['Sandbox','35.200 session × 120 giây, 1 active vCPU + 4 GB'],['Sinh ảnh','3.520 ảnh, Stable Image Core tại Oregon'],['Connector và egress','1 triệu call, 300 GB internet outbound'],['Dữ liệu và audit','50 GB state, 20 GB audit mới/tháng, giữ 12 tháng']],56,163,1168,379,[340,828],23);
  text(s,'Staging riêng',56,574,300,36,26,C.teal,true);
  text(s,'5% model/compute, 100 MAU, không warm capacity',365,574,850,58,25,C.muted);
 }
 // 04
 {
- const s=slide('Kiến trúc bao phủ đủ 19 component','Đi theo đường xử lý trên cùng: SSO, managed load distribution, gateway, compute và model. Compute truy cập các thành phần dữ liệu theo quyền người dùng. Connector và sandbox được tách khỏi luồng chat. Hàng dưới là các năng lực vận hành xuyên suốt. Chọn us-east-1 và US inference boundary, cần duyệt residency và đo độ trễ từ Việt Nam trước release.',[
+ const s=slide('Kiến trúc bao phủ đủ 19 component','Đi theo đường xử lý trên cùng: SSO, managed load distribution, gateway, compute và model. Compute truy cập các thành phần dữ liệu theo quyền người dùng. Connector và sandbox được tách khỏi luồng chat. Hàng dưới là các năng lực vận hành xuyên suốt. Primary Singapore, Nova Lite dùng APAC, Sonnet dùng Global, model ảnh tại Oregon. Cần duyệt inference destinations và đo TTFT từ Việt Nam.',[
  'https://docs.aws.amazon.com/apigateway/latest/developerguide/response-transfer-mode.html',
  'https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/code-interpreter-resource-management.html']);
  const xs=[56,292,528,764,1000];
@@ -185,7 +188,7 @@ function node(s,code,label,x,y,w=220,h=78){
 }
 // 13
 {
- const s=slide('Routing là đòn bẩy tiết kiệm lớn nhất','So sánh cùng workload cho thấy routing có thể giảm khoảng 44,84% so với toàn bộ text dùng Sonnet. Đây là chênh lệch dự toán, không phải savings đo được. Sử dụng thấp hơn của workspace chỉ là sensitivity, báo giá chính vẫn tính đủ 20 TB. Khi 4.000 DAU, envelope khoảng 12.563 USD nhưng phải resize quota và đo lại độ trễ.');
+ const s=slide('Routing là đòn bẩy tiết kiệm lớn nhất','So sánh cùng workload cho thấy routing có thể giảm khoảng '+saving+'% so với toàn bộ text dùng Sonnet. Đây là chênh lệch dự toán, không phải savings đo được. Sử dụng thấp hơn của workspace chỉ là sensitivity, báo giá chính vẫn tính đủ 20 TB. Khi 4.000 DAU, envelope '+fmt(m.summary.double_dau_total)+' USD, phải resize quota và đo lại độ trễ.');
  table(s,[['Kịch bản','USD/tháng','Điều kiện'],['Toàn bộ text dùng Sonnet',fmt(m.summary.all_reference_total),'Cùng workload và baseline'],['Routing Lite / Sonnet',fmt(m.summary.total),'Mỗi cấp đạt ≥95% baseline'],['Workspace 1 GB/người',fmt(m.summary.sparse_workspace_total),'Sensitivity, backup allowance giữ nguyên'],['4.000 DAU',fmt(m.summary.double_dau_total),'Envelope tuyến tính, sizing lại']],56,168,1168,300,[440,220,508],22);
  text(s,saving+'%',56,516,280,75,54,C.teal,true);
  text(s,'Chênh lệch dự toán routing so với toàn Sonnet',350,525,860,73,29,C.ink,true);
@@ -215,7 +218,9 @@ await fs.writeFile(path.join(build,'timing.json'),JSON.stringify({seconds:sum,sl
 // All tables and architecture components remain editable in the PowerPoint file.
 const candidate=path.join(build,'candidate.pptx');
 await (await PresentationFile.exportPptx(p)).save(candidate);
-const finalPath=path.join(root,'deliverables/G03_slide.pptx');
+const revision=String(Date.now());
+const finalPath=path.join(root,`deliverables/.review/${revision}/G03_slide.pptx`);
+await fs.mkdir(path.dirname(finalPath),{recursive:true});
 const result=await finalizePresentation({workspaceDir:root,candidatePath:candidate,finalPath,
  pythonExecutable:path.join(runtime,'python/python.exe'),
  integrityValidatorPath:path.join(skill,'container_tools/inspect_presentation_package_integrity.py'),
@@ -223,7 +228,7 @@ const result=await finalizePresentation({workspaceDir:root,candidatePath:candida
  layoutArgs:['--expected-slide-size-emu','12192000,6858000','--validate-bullet-geometry','--validate-heading-fit',...[2,3,6,7,10,12,13].flatMap(n=>['--require-native-table-slide',String(n)])],
  explicitTotalSlideCount:15,requiredNativeTableOwnerSlides:[2,3,6,7,10,12,13],requiredNativeChartOwnerSlides:[],
  fontPolicy:{basis:'design',families:['Arial']},verifyArtifactToolImport:true,
- receiptPath:path.join(build,'validation.json')});
+ receiptPath:path.join(build,`validation-${revision}.json`)});
 console.log(JSON.stringify({slides:15,seconds:sum,finalPath,result}));
 // Render final package, not just the in-memory authoring model.
 const finalDeck=await PresentationFile.importPptx(await FileBlob.load(finalPath));
@@ -232,3 +237,4 @@ for(let i=0;i<finalDeck.slides.items.length;i++){
  await fs.writeFile(path.join(build,`slide-${String(i+1).padStart(2,'0')}.png`),new Uint8Array(await image.arrayBuffer()));
 }
 console.log('Rendered all final slides.');
+await fs.copyFile(finalPath,path.join(root,'deliverables/G03_slide.pptx'));

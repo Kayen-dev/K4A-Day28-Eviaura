@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 infra/parameters.local.json
 deliverables/*preview*.png
+deliverables/.review/
+deliverables/G03_slide.reviewed.pptx

@@ -4,6 +4,8 @@
 
 **Báo giá hiện tại dùng Singapore (`ap-southeast-1`): [G03_baogia.xlsx](deliverables/G03_baogia.xlsx), tổng 6.022,78 USD/tháng.** Xem [phạm vi region và ngoại lệ model inference](docs/REGION_SINGAPORE.md). IaC ban đầu vẫn là US reference, cần chỉnh profile/IAM trước deploy Singapore.
 
+[Slide G03](deliverables/G03_slide.pptx): 15 slide 16:9, có ghi chú trình bày 7 phút, tổng giá khớp XLSX Singapore.
+
 - [Kiến trúc, sizing và cổng H1–H8](docs/ARCHITECTURE.md)
 - [Báo giá XLSX](deliverables/Eviaura_baogia.xlsx) và [bản đọc nhanh](deliverables/BAOGIA.md)
 - [CloudFormation mục tiêu](infra/vbot.template.json), [hướng dẫn triển khai](docs/DEPLOYMENT.md)

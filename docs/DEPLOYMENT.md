@@ -1,5 +1,7 @@
 # Mã hạ tầng và trình tự triển khai
 
+> Báo giá mới dùng Singapore. Template và các lệnh US dưới đây là reference ban đầu, cần sửa model profile/destination IAM và validate lại trước deploy. Xem [phạm vi Singapore](REGION_SINGAPORE.md). Không chỉ thay `--region`.
+
 **Chưa deploy AWS.** `infra/vbot.template.json` là target infrastructure; ứng dụng, dữ liệu và identity integrations chưa được xây dựng trong repo đề bài. Không chạy deploy ngay với ZIP giả hoặc handler trả thành công tĩnh.
 
 ## Có gì trong template
