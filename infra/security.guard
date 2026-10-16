@@ -1,0 +1,47 @@
+# Project rules for generated VBot infrastructure; limited static checks, not a compliance certification.
+let buckets = Resources.*[ Type == 'AWS::S3::Bucket' ]
+rule private_encrypted_retained_buckets when %buckets !empty {
+ %buckets {
+  DeletionPolicy == 'Retain'
+  UpdateReplacePolicy == 'Retain'
+  Properties.PublicAccessBlockConfiguration.BlockPublicAcls == true
+  Properties.PublicAccessBlockConfiguration.IgnorePublicAcls == true
+  Properties.PublicAccessBlockConfiguration.BlockPublicPolicy == true
+  Properties.PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+  Properties.BucketEncryption exists
+  Properties.VersioningConfiguration.Status == 'Enabled'
+ }
+}
+let tables = Resources.*[ Type == 'AWS::DynamoDB::Table' ]
+rule recoverable_tables when %tables !empty {
+ %tables {
+  DeletionPolicy == 'Retain'
+  Properties.SSESpecification.SSEEnabled == true
+  Properties.PointInTimeRecoverySpecification.PointInTimeRecoveryEnabled == true
+  Properties.DeletionProtectionEnabled == true
+ }
+}
+let functions = Resources.*[ Type == 'AWS::Lambda::Function' ]
+rule bounded_functions when %functions !empty {
+ %functions {
+  Properties.ReservedConcurrentExecutions > 0
+  Properties.Timeout <= 600
+  Properties.Environment.Variables.RELEASE_ENABLED == 'false'
+ }
+}
+rule isolated_interpreter {
+ Resources.Interpreter.Properties.NetworkConfiguration.NetworkMode == 'VPC'
+ Resources.Interpreter.Properties.ExecutionRoleArn !exists
+ Resources.SandboxVpc.Properties.EnableDnsSupport == false
+ Resources.SandboxGroup.Properties.SecurityGroupIngress !exists
+ Resources.SandboxGroup.Properties.SecurityGroupEgress[*].CidrIp == '127.0.0.1/32'
+}
+rule authenticated_stream {
+ Resources.ChatMethod.Properties.AuthorizationType == 'COGNITO_USER_POOLS'
+ Resources.ChatMethod.Properties.AuthorizationScopes[*] == 'vbot/chat'
+ Resources.ChatMethod.Properties.Integration.ResponseTransferMode == 'STREAM'
+}
+rule immutable_audit {
+ Resources.Audit.Properties.ObjectLockConfiguration.Rule.DefaultRetention.Mode == 'COMPLIANCE'
+ Resources.Audit.Properties.ObjectLockConfiguration.Rule.DefaultRetention.Days >= 366
+}

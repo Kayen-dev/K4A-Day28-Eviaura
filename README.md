@@ -1,5 +1,16 @@
 # K4A-Day28-Eviaura — VBot Production Capstone
 
+## Thiết kế AWS của Eviaura
+
+**Báo giá hiện tại dùng Singapore (`ap-southeast-1`): [G03_baogia.xlsx](deliverables/G03_baogia.xlsx), tổng 6.022,78 USD/tháng.** Xem [phạm vi region và ngoại lệ model inference](docs/REGION_SINGAPORE.md). IaC ban đầu vẫn là US reference, cần chỉnh profile/IAM trước deploy Singapore.
+
+- [Kiến trúc, sizing và cổng H1–H8](docs/ARCHITECTURE.md)
+- [Báo giá XLSX](deliverables/Eviaura_baogia.xlsx) và [bản đọc nhanh](deliverables/BAOGIA.md)
+- [CloudFormation mục tiêu](infra/vbot.template.json), [hướng dẫn triển khai](docs/DEPLOYMENT.md)
+- [Kết quả kiểm tra và phần chưa kiểm chứng](deliverables/VALIDATION.md)
+
+Đây là gói thiết kế và mã hạ tầng trước triển khai. Chưa tạo tài nguyên AWS; ứng dụng VBot và các bằng chứng chất lượng/độ trễ/restore thực cần hoàn thiện trước production.
+
 ## Tổng quan
 
 Bài capstone yêu cầu thiết kế **VBot Workplace** — trợ lý AI văn phòng nội bộ chạy trên cloud, kết nối Google Workspace, Microsoft 365/Outlook, Notion, Jira và Confluence.

@@ -1,0 +1,261 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "line": 0,
+      "col": "",
+      "msg": "Hạng mục \"Sonnet 4.5: L3/L4 và escalation\" chiếm 64% tổng. Hội đồng sẽ hỏi kỹ sizing của dòng này."
+    }
+  ],
+  "summary": {
+    "rows": 27,
+    "subtotal": 6022.78,
+    "total": 6022.78,
+    "perDau": 3.01139,
+    "laborUsd": 200,
+    "byComponent": {
+      "compute": 178.19,
+      "llm": 4106.33,
+      "gateway": 4.25,
+      "load_balancer": 0,
+      "authn": 31.5,
+      "authz": 0,
+      "database": 22.78,
+      "vector_db": 4.93,
+      "object_storage": 521.5,
+      "cache_queue": 1.2,
+      "sandbox": 156.83,
+      "connectors": 26.87,
+      "secrets_kms": 9.5,
+      "backup_dr": 118.81,
+      "monitoring": 27.6,
+      "governance": 30,
+      "network": 44.79,
+      "cicd": 5,
+      "embedding": 3.36,
+      "ops_labor": 200,
+      "contingency": 529.34
+    },
+    "missingComponents": [],
+    "evidenceIds": null
+  },
+  "ok": true,
+  "items": [
+    {
+      "line": 2,
+      "component": "compute",
+      "y_nghia": "Chat streaming Lambda ARM",
+      "ghi_chu": "ap-southeast-1; 512 MB × 20 s × 352000 × 1.05 staging; ARM on-demand execution + requests SKU: KSD76ZR243WEPWRS, V5T5H5YEU5SUN3C2",
+      "chi_phi": 49.35,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20261014171944/ap-southeast-1/index.json"
+    },
+    {
+      "line": 3,
+      "component": "compute",
+      "y_nghia": "Background worker và chờ sandbox",
+      "ghi_chu": "ap-southeast-1; 19% × 352000 × 120 s × 1 GB × 1.05; worker billed during sandbox wait SKU: KSD76ZR243WEPWRS, V5T5H5YEU5SUN3C2",
+      "chi_phi": 112.37,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20261014171944/ap-southeast-1/index.json"
+    },
+    {
+      "line": 4,
+      "component": "compute",
+      "y_nghia": "Provisioned concurrency giờ hành chính",
+      "ghi_chu": "ap-southeast-1; 10 slots × 0.5 GB × 220 h × 3600 × 0.0000041593 USD/GB-s SKU: GWU2KWMWQX7K69Q6",
+      "chi_phi": 16.47,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20261014171944/ap-southeast-1/index.json"
+    },
+    {
+      "line": 5,
+      "component": "llm",
+      "y_nghia": "Nova Lite: L1/L2/L5",
+      "ghi_chu": "ap-southeast-1; APAC inference from Singapore; 0.081 input / 0.324 output USD/M tokens; 5% retry + 5% staging, no cache discount SKU: VZHPZBZDSTK6X8JY, 4EKJAQJ2B86NTSVN",
+      "chi_phi": 116.68,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrock/20261014033016/ap-southeast-1/index.json"
+    },
+    {
+      "line": 6,
+      "component": "llm",
+      "y_nghia": "Sonnet 4.5: L3/L4 và escalation",
+      "ghi_chu": "ap-southeast-1; Global inference from Singapore; 3 input / 15 output USD/M; 10% escalation + 5% retry + 5% staging; not Singapore-only residency SKU: HN7W97PW93XZ53AJ, 4A664J28NYJS5ZWH",
+      "chi_phi": 3834.42,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/20261012084008/ap-southeast-1/index.json"
+    },
+    {
+      "line": 7,
+      "component": "llm",
+      "y_nghia": "Stable Image Core: sinh ảnh",
+      "ghi_chu": "Primary ap-southeast-1; image inference us-west-2; 3520 images × 0.04 USD × 1.05 retry × 1.05 staging; stability.stable-image-core-v1:1; replaces EOL Nova Canvas SKU: NCSHF252RXA4FW7P",
+      "chi_phi": 155.23,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/20261012084008/us-west-2/index.json"
+    },
+    {
+      "line": 8,
+      "component": "gateway",
+      "y_nghia": "API Gateway REST + router",
+      "ghi_chu": "ap-southeast-1; 1M calls × 4.25 USD/M; managed regional multi-AZ; quota in database SKU: GVUAQ6EVG8QNVVZQ",
+      "chi_phi": 4.25,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonApiGateway/20261013003044/ap-southeast-1/index.json"
+    },
+    {
+      "line": 9,
+      "component": "load_balancer",
+      "y_nghia": "Managed regional request distribution",
+      "ghi_chu": "ap-southeast-1; Đã nằm trong API Gateway REST multi-AZ, TLS and routing; no separate ALB SKU: GVUAQ6EVG8QNVVZQ",
+      "chi_phi": 0,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonApiGateway/20261013003044/ap-southeast-1/index.json"
+    },
+    {
+      "line": 10,
+      "component": "authn",
+      "y_nghia": "Cognito enterprise federation",
+      "ghi_chu": "ap-southeast-1; 2100 federated MAU × 0.015 USD; corporate IdP enforces MFA; no allowance deducted SKU: BBNTE25DFBR6DDUE",
+      "chi_phi": 31.5,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCognito/20260925193108/ap-southeast-1/index.json"
+    },
+    {
+      "line": 11,
+      "component": "authz",
+      "y_nghia": "RBAC/ABAC và ACL kiểm tra lại",
+      "ghi_chu": "ap-southeast-1; Đã nằm trong compute/database; identity-derived tenant/user, source ACL recheck SKU: YCMS8QPJ7DRVHAXD",
+      "chi_phi": 0,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonDynamoDB/20260911124422/ap-southeast-1/index.json"
+    },
+    {
+      "line": 12,
+      "component": "database",
+      "y_nghia": "DynamoDB Standard on-demand",
+      "ghi_chu": "ap-southeast-1; 50 GB × 0.285 + 8M WRU × 0.71/M + 20M RRU × 0.1425/M; prod+staging; managed multi-AZ SKU: YCMS8QPJ7DRVHAXD, PZTVP859DVDCGT8X, XF4WN9CQUFPSY9SQ",
+      "chi_phi": 22.78,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonDynamoDB/20260911124422/ap-southeast-1/index.json"
+    },
+    {
+      "line": 13,
+      "component": "vector_db",
+      "y_nghia": "S3 Vectors storage and ingestion",
+      "ghi_chu": "ap-southeast-1; 1M × 6272 bytes / GiB × (0.066 storage + 20% × 0.219 PUT/GB) × 1.05 staging; batched PUT SKU: TQYRQYQZ9D2NQBFF, C4XWGMBV49F5S5BG",
+      "chi_phi": 0.67,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/20261015173540/ap-southeast-1/index.json"
+    },
+    {
+      "line": 14,
+      "component": "vector_db",
+      "y_nghia": "S3 Vectors queries",
+      "ghi_chu": "ap-southeast-1; 300000 × (0.0000027/request + index scan: 100K/900K vectors × 5248 bytes, 0.000004278/0.000002139 USD/GB); top20 IDs SKU: K3TQCKX4R94KY574, CNSBKCH89HNFSB7X, UYPBJ8SUXZ632CBS",
+      "chi_phi": 4.26,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/20261015173540/ap-southeast-1/index.json"
+    },
+    {
+      "line": 15,
+      "component": "object_storage",
+      "y_nghia": "Workspace quota đầy đủ + KB + staging",
+      "ghi_chu": "ap-southeast-1; 20300 GB × 0.025 USD/GB-month; full 2000 × 10 GB user quota SKU: M6MTARCQFUQBQ2V3",
+      "chi_phi": 507.5,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/20261015173540/ap-southeast-1/index.json"
+    },
+    {
+      "line": 16,
+      "component": "object_storage",
+      "y_nghia": "S3 object requests",
+      "ghi_chu": "ap-southeast-1; 2M PUT/LIST × 0.005/1000 + 10M GET × 0.0004/1000 SKU: VHRJWKRHEA6VHEFY, T469UNPYX78434EG",
+      "chi_phi": 14,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/20261015173540/ap-southeast-1/index.json"
+    },
+    {
+      "line": 17,
+      "component": "cache_queue",
+      "y_nghia": "SQS + TTL cache",
+      "ghi_chu": "ap-southeast-1; 3M standard requests × 0.40/M; TTL cache nằm trong database; encrypted queue + DLQ SKU: PVF7MDBNRK7V9S5H",
+      "chi_phi": 1.2,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSQueueService/20260911124607/ap-southeast-1/index.json"
+    },
+    {
+      "line": 18,
+      "component": "sandbox",
+      "y_nghia": "AgentCore Code Interpreter VPC",
+      "ghi_chu": "ap-southeast-1; 35200 × 120s / 3600 × (1 active vCPU × 0.0895/h + 4 GB × 0.00945/h) × 1.05 staging; isolated VPC SKU: FGH5WAQVZXJRQX9H, JEH9TM5GCJ5MKSTU",
+      "chi_phi": 156.83,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockAgentCore/20261014214835/ap-southeast-1/index.json"
+    },
+    {
+      "line": 19,
+      "component": "connectors",
+      "y_nghia": "Delegated OAuth Lambda workers",
+      "ghi_chu": "ap-southeast-1; 1M × 1 GB × 2s × 0.0000133334 + 0.20/M requests; overhead beyond background duration SKU: KSD76ZR243WEPWRS, V5T5H5YEU5SUN3C2",
+      "chi_phi": 26.87,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20261014171944/ap-southeast-1/index.json"
+    },
+    {
+      "line": 20,
+      "component": "secrets_kms",
+      "y_nghia": "KMS và OAuth app secrets",
+      "ghi_chu": "ap-southeast-1; 2 keys × 1 + 1M KMS × 0.03/10000 + 10 secrets × 0.40 + 100K API × 0.05/10000 SKU: R8AEZWXXE7G5EHRZ, 7AVHXGCZK6D9ARBK, J5PMSXRJZ3HNHFEV, KAUJ7G87ND7HD8N8",
+      "chi_phi": 9.5,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/awskms/20260911124601/ap-southeast-1/index.json; https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSSecretsManager/20260911124610/ap-southeast-1/index.json"
+    },
+    {
+      "line": 21,
+      "component": "backup_dr",
+      "y_nghia": "PITR + object versions + restore drill",
+      "ghi_chu": "ap-southeast-1; 50 GB PITR × 0.228 + 4000 GB S3 versions × 0.025 + 50 GB backup × 0.114 + 10 GB restore × 0.171; same-region SKU: GSSDTS2TPQ4RHW4R, M6MTARCQFUQBQ2V3, A4JVT7FRHPDGJJKZ, EGZ29Y92CQQP7NGF",
+      "chi_phi": 118.81,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonDynamoDB/20260911124422/ap-southeast-1/index.json; https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/20261015173540/ap-southeast-1/index.json"
+    },
+    {
+      "line": 22,
+      "component": "monitoring",
+      "y_nghia": "CloudWatch + S3 audit 12 tháng",
+      "ghi_chu": "ap-southeast-1; 20 GB ingest × 0.70 + 20 GB logs × 0.03 + 20 metrics × 0.30 + 10 alarms × 0.10 + 240 GB S3 audit × 0.025 SKU: ZEKCE7VGMSM5XZPW, RKCBFFXUWXG8KUQY, 2BF5WZ4QVWF9XRRT, ERS2PGV5BX4XH4WQ, M6MTARCQFUQBQ2V3",
+      "chi_phi": 27.6,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/20261007115540/ap-southeast-1/index.json; https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/20261015173540/ap-southeast-1/index.json"
+    },
+    {
+      "line": 23,
+      "component": "governance",
+      "y_nghia": "DLP/guardrail và eval allowance",
+      "ghi_chu": "ap-southeast-1; DLP and approvals nằm trong compute; 30 USD/month model eval allowance, not a separate managed Guardrails SKU",
+      "chi_phi": 30,
+      "bang_chung": "https://aws.amazon.com/bedrock/pricing/"
+    },
+    {
+      "line": 24,
+      "component": "network",
+      "y_nghia": "Internet egress + regional WAF",
+      "ghi_chu": "ap-southeast-1; 300 GB × 0.12 + 5 ACL + 3 rules × 1 + 1M requests × 0.60/M; image transfer allowance 1 GB SG→Oregon × 0.09 + 5 GB return × 0.02; no NAT SKU: SDHP4R7WGBVJPQPY, 662KTAGFABFH9R5Q, 3YTWKVGN4GJDXWEM, 2K76BPU6EZT96BZ4, YRGJEFXZW24K7ZXS, PQJGBSU7YWWTQH72",
+      "chi_phi": 44.79,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/20260916132208/ap-southeast-1/index.json; https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/awswaf/20260914163921/ap-southeast-1/index.json"
+    },
+    {
+      "line": 25,
+      "component": "cicd",
+      "y_nghia": "CodeBuild và staging",
+      "ghi_chu": "ap-southeast-1; 1000 Linux small build minutes × 0.005; artifacts nằm trong object_storage; 5% staging in compute/model rows SKU: 2FQZXBQT369M266G",
+      "chi_phi": 5,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/CodeBuild/20260911124625/ap-southeast-1/index.json"
+    },
+    {
+      "line": 26,
+      "component": "embedding",
+      "y_nghia": "Titan Text Embeddings V2",
+      "ghi_chu": "ap-southeast-1; 120M ingestion+query tokens × 0.028 USD/M; first 500M index adds 14 USD one-time SKU: J2CRZZCGSZ9UJNHZ",
+      "chi_phi": 3.36,
+      "bang_chung": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrock/20261014033016/ap-southeast-1/index.json"
+    },
+    {
+      "line": 27,
+      "component": "ops_labor",
+      "y_nghia": "Vận hành và trực giờ hành chính",
+      "ghi_chu": "ap-southeast-1; 0.10 FTE × 2000 USD/FTE-month; shared business-hours support; 16 h/month",
+      "chi_phi": 200,
+      "bang_chung": "NA"
+    },
+    {
+      "line": 28,
+      "component": "contingency",
+      "y_nghia": "Dự phòng biến động tải và đơn giá",
+      "ghi_chu": "ap-southeast-1; 10% of AWS recurring estimate; not a hard spending cap",
+      "chi_phi": 529.34,
+      "bang_chung": "NA"
+    }
+  ]
+}

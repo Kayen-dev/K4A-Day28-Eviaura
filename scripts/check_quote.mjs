@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+const html=fs.readFileSync('vbot-capstone.html','utf8');
+const start=html.indexOf('const DAU =');
+const end=html.indexOf('/*VALIDATOR-END*/');
+if(start<0||end<start)throw Error('Lab validator marker missing');
+const input=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const context=vm.createContext({input});
+vm.runInContext(html.slice(start,end)+'\nresult=validateQuote(input,null);',context);
+fs.writeFileSync('deliverables/quote-validation.json',JSON.stringify(context.result,null,2));
+console.log(JSON.stringify({ok:context.result.ok,errors:context.result.errors,warnings:context.result.warnings,summary:context.result.summary},null,2));
+if(!context.result.ok)process.exitCode=1;

@@ -1,0 +1,261 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "line": 0,
+      "col": "",
+      "msg": "Hạng mục \"Sonnet 4.5: L3/L4 và escalation\" chiếm 67% tổng. Hội đồng sẽ hỏi kỹ sizing của dòng này."
+    }
+  ],
+  "summary": {
+    "rows": 27,
+    "subtotal": 6331.27,
+    "total": 6331.269999999999,
+    "perDau": 3.165634999999999,
+    "laborUsd": 200,
+    "byComponent": {
+      "compute": 174.92,
+      "llm": 4459.53,
+      "gateway": 3.5,
+      "load_balancer": 0,
+      "authn": 31.5,
+      "authz": 0,
+      "database": 20,
+      "vector_db": 4.51,
+      "object_storage": 480.9,
+      "cache_queue": 1.2,
+      "sandbox": 156.83,
+      "connectors": 26.87,
+      "secrets_kms": 9.5,
+      "backup_dr": 108.5,
+      "monitoring": 23.12,
+      "governance": 30,
+      "network": 35.6,
+      "cicd": 5,
+      "embedding": 2.4,
+      "ops_labor": 200,
+      "contingency": 557.39
+    },
+    "missingComponents": [],
+    "evidenceIds": null
+  },
+  "ok": true,
+  "items": [
+    {
+      "line": 2,
+      "component": "compute",
+      "y_nghia": "Chat streaming Lambda ARM",
+      "ghi_chu": "us-east-1; 512 MB × 20 s × 352000 × 1.05 staging × 0.0000133334 USD/GB-s + 0.20 USD/M invocation",
+      "chi_phi": 49.35,
+      "bang_chung": "https://aws.amazon.com/lambda/pricing/"
+    },
+    {
+      "line": 3,
+      "component": "compute",
+      "y_nghia": "Background worker và chờ sandbox",
+      "ghi_chu": "us-east-1; 19% tasks × 352000 × 120 s × 1 GB × 1.05 staging × 0.0000133334 USD/GB-s + invocation; separate trusted worker remains billable while waiting",
+      "chi_phi": 112.37,
+      "bang_chung": "https://aws.amazon.com/lambda/pricing/"
+    },
+    {
+      "line": 4,
+      "component": "compute",
+      "y_nghia": "Provisioned concurrency giờ hành chính",
+      "ghi_chu": "us-east-1; 10 warm slots × 0.5 GB × 220 h × 3600 × 0.0000033334; execution conservatively billed at on-demand above",
+      "chi_phi": 13.2,
+      "bang_chung": "https://aws.amazon.com/lambda/pricing/"
+    },
+    {
+      "line": 5,
+      "component": "llm",
+      "y_nghia": "Nova Lite: L1/L2/L5",
+      "ghi_chu": "us-east-1; Cumulative task tokens; 0.06 input / 0.24 output USD per M; 5% retries and 5% staging; no cache discount",
+      "chi_phi": 86.43,
+      "bang_chung": "https://aws.amazon.com/nova/pricing/"
+    },
+    {
+      "line": 6,
+      "component": "llm",
+      "y_nghia": "Sonnet 4.5: L3/L4 và escalation",
+      "ghi_chu": "us-east-1; US geographic inference; 3.30 input / 16.50 output USD per M; 10% escalation of cheap tasks + 5% retry + 5% staging",
+      "chi_phi": 4217.87,
+      "bang_chung": "https://www-cdn.anthropic.com/files/4zrzovbb/website/3684c2faafb97418665782cea0001f439f74b1d2.pdf"
+    },
+    {
+      "line": 7,
+      "component": "llm",
+      "y_nghia": "Nova Canvas: ảnh 1024 standard",
+      "ghi_chu": "us-east-1; 3520 images × 0.04 USD × 1.05 retries × 1.05 staging",
+      "chi_phi": 155.23,
+      "bang_chung": "https://aws.amazon.com/nova/pricing/"
+    },
+    {
+      "line": 8,
+      "component": "gateway",
+      "y_nghia": "API Gateway REST + router",
+      "ghi_chu": "us-east-1; 1000000 API calls × 3.50 USD/M; regional multi-AZ; quota in DynamoDB included in database",
+      "chi_phi": 3.5,
+      "bang_chung": "https://aws.amazon.com/api-gateway/pricing/"
+    },
+    {
+      "line": 9,
+      "component": "load_balancer",
+      "y_nghia": "Managed regional request distribution",
+      "ghi_chu": "us-east-1; Đã nằm trong API Gateway REST, TLS và multi-AZ routing; không thêm ALB",
+      "chi_phi": 0,
+      "bang_chung": "https://aws.amazon.com/api-gateway/pricing/"
+    },
+    {
+      "line": 10,
+      "component": "authn",
+      "y_nghia": "Cognito enterprise federation",
+      "ghi_chu": "us-east-1; 2000 prod + 100 staging federated MAU × 0.015 USD; MFA at corporate IdP; no allowance deducted",
+      "chi_phi": 31.5,
+      "bang_chung": "https://aws.amazon.com/cognito/pricing/"
+    },
+    {
+      "line": 11,
+      "component": "authz",
+      "y_nghia": "RBAC/ABAC và ACL kiểm tra lại",
+      "ghi_chu": "us-east-1; Đã nằm trong compute/database: server derives tenant/user, per-document ACL, deny stale ACL",
+      "chi_phi": 0,
+      "bang_chung": "https://aws.amazon.com/dynamodb/pricing/on-demand/"
+    },
+    {
+      "line": 12,
+      "component": "database",
+      "y_nghia": "DynamoDB Standard on-demand",
+      "ghi_chu": "us-east-1; 50 GB × 0.25 + 8M WRU × 0.625/M + 20M RRU × 0.125/M; includes transactional quota/approvals/token vault ciphertext and staging",
+      "chi_phi": 20,
+      "bang_chung": "https://aws.amazon.com/dynamodb/pricing/on-demand/"
+    },
+    {
+      "line": 13,
+      "component": "vector_db",
+      "y_nghia": "S3 Vectors storage and ingestion",
+      "ghi_chu": "us-east-1; 1000000 × (4096+1024+1024+128) bytes / GiB × 0.06 + 20% monthly PUT × 0.20/GB; prod+staging",
+      "chi_phi": 0.61,
+      "bang_chung": "https://aws.amazon.com/s3/pricing/"
+    },
+    {
+      "line": 14,
+      "component": "vector_db",
+      "y_nghia": "S3 Vectors queries",
+      "ghi_chu": "us-east-1; 300000 queries × (2.50 USD/M + scan 1M vectors, 5248 bytes/vector, tiers 0.004/0.002 USD/TiB); top20 IDs below included return threshold",
+      "chi_phi": 3.9,
+      "bang_chung": "https://aws.amazon.com/s3/pricing/"
+    },
+    {
+      "line": 15,
+      "component": "object_storage",
+      "y_nghia": "Workspace quota đầy đủ + KB + staging",
+      "ghi_chu": "us-east-1; 2000 × 10 GB + 200 GB KB + 100 GB staging = 20300 GB × 0.023 USD/GB-month",
+      "chi_phi": 466.9,
+      "bang_chung": "https://aws.amazon.com/s3/pricing/"
+    },
+    {
+      "line": 16,
+      "component": "object_storage",
+      "y_nghia": "S3 object requests",
+      "ghi_chu": "us-east-1; 2000000 PUT/LIST × 0.005/1000 + 10000000 GET × 0.0004/1000",
+      "chi_phi": 14,
+      "bang_chung": "https://aws.amazon.com/s3/pricing/"
+    },
+    {
+      "line": 17,
+      "component": "cache_queue",
+      "y_nghia": "SQS + TTL cache",
+      "ghi_chu": "us-east-1; 3000000 queue API units × 0.40/M; cache in DynamoDB already in database; encrypted queues + DLQ",
+      "chi_phi": 1.2,
+      "bang_chung": "https://aws.amazon.com/sqs/pricing/"
+    },
+    {
+      "line": 18,
+      "component": "sandbox",
+      "y_nghia": "AgentCore Code Interpreter VPC",
+      "ghi_chu": "us-east-1; 35200 sessions × 120 s × (1 active vCPU × 0.0895/h + 4 GB × 0.00945/h); no assumed idle CPU discount; 5% staging",
+      "chi_phi": 156.83,
+      "bang_chung": "https://aws.amazon.com/bedrock/agentcore/pricing/"
+    },
+    {
+      "line": 19,
+      "component": "connectors",
+      "y_nghia": "Delegated OAuth Lambda workers",
+      "ghi_chu": "us-east-1; 1000000 calls × 1 GB × 2 s × 0.0000133334 + 0.20/M; connector overhead separately budgeted beyond worker job duration; no full-tenant service account",
+      "chi_phi": 26.87,
+      "bang_chung": "https://aws.amazon.com/lambda/pricing/"
+    },
+    {
+      "line": 20,
+      "component": "secrets_kms",
+      "y_nghia": "KMS và OAuth app secrets",
+      "ghi_chu": "us-east-1; 2 customer keys × 1 USD + 1M requests × 0.03/10000 + 10 app secrets × 0.40 + 100000 API × 0.05/10000; user refresh tokens envelope-encrypted in DynamoDB",
+      "chi_phi": 9.5,
+      "bang_chung": "https://aws.amazon.com/kms/pricing/"
+    },
+    {
+      "line": 21,
+      "component": "backup_dr",
+      "y_nghia": "PITR + object versions + restore drill",
+      "ghi_chu": "us-east-1; 50 GB DynamoDB PITR × 0.20 + 4000 GB previous S3 versions × 0.023 + 50 GB monthly backup × 0.10 + 10 GB restore × 0.15; same-region recovery",
+      "chi_phi": 108.5,
+      "bang_chung": "https://aws.amazon.com/dynamodb/pricing/on-demand/"
+    },
+    {
+      "line": 22,
+      "component": "monitoring",
+      "y_nghia": "CloudWatch + S3 audit 12 tháng",
+      "ghi_chu": "us-east-1; 20 GB ingest × 0.50 + 20 GB logs × 0.03 + 20 metrics × 0.30 + 10 alarms × 0.10 + 240 GB audit S3 × 0.023; audit writes included object requests",
+      "chi_phi": 23.12,
+      "bang_chung": "https://aws.amazon.com/cloudwatch/pricing/"
+    },
+    {
+      "line": 23,
+      "component": "governance",
+      "y_nghia": "DLP/guardrail và eval allowance",
+      "ghi_chu": "us-east-1; DLP, injection rules and approvals nằm trong compute; 30 USD monthly reference-model eval/review allowance; fail-closed quality gate; not measured quality evidence",
+      "chi_phi": 30,
+      "bang_chung": "https://aws.amazon.com/bedrock/pricing/"
+    },
+    {
+      "line": 24,
+      "component": "network",
+      "y_nghia": "Internet egress + regional WAF",
+      "ghi_chu": "us-east-1; 300 GB internet egress × 0.09 + 5 USD web ACL + 3 rules × 1 + 1M requests × 0.60; isolated sandbox VPC; no NAT or paid interface endpoints",
+      "chi_phi": 35.6,
+      "bang_chung": "https://aws.amazon.com/waf/pricing/"
+    },
+    {
+      "line": 25,
+      "component": "cicd",
+      "y_nghia": "CodeBuild và staging",
+      "ghi_chu": "us-east-1; 1000 Linux small build minutes × 0.005; IaC/S3 artifacts included object_storage; staging compute/model/db explicitly in respective lines",
+      "chi_phi": 5,
+      "bang_chung": "https://aws.amazon.com/codebuild/pricing/"
+    },
+    {
+      "line": 26,
+      "component": "embedding",
+      "y_nghia": "Titan Text Embeddings V2",
+      "ghi_chu": "us-east-1; 100M monthly ingestion tokens + 20M query tokens × 0.02 USD/M; first index 500M tokens extra 10 USD one-time",
+      "chi_phi": 2.4,
+      "bang_chung": "https://aws.amazon.com/bedrock/pricing/"
+    },
+    {
+      "line": 27,
+      "component": "ops_labor",
+      "y_nghia": "Vận hành và trực giờ hành chính",
+      "ghi_chu": "us-east-1; 0.10 FTE × 2000 USD/FTE-month; 16 h/month; shared business-hours on-call, not dedicated 24/7",
+      "chi_phi": 200,
+      "bang_chung": "NA"
+    },
+    {
+      "line": 28,
+      "component": "contingency",
+      "y_nghia": "Dự phòng biến động tải và đơn giá",
+      "ghi_chu": "us-east-1; 10% of AWS recurring estimate; not a spending cap; exact SKU evidence still needs capture",
+      "chi_phi": 557.39,
+      "bang_chung": "NA"
+    }
+  ]
+}

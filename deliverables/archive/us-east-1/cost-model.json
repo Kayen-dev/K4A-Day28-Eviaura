@@ -1,0 +1,290 @@
+{
+  "as_of": "2026-10-16",
+  "region": "us-east-1",
+  "inputs": {
+    "dau": 2000,
+    "requests_per_user_day": 8,
+    "workdays": 22,
+    "hours_month": 730,
+    "business_hours": 220,
+    "peak_factor": 6,
+    "staging_ratio": 0.05,
+    "escalation_ratio": 0.1,
+    "workspace_gb_per_user": 10,
+    "retry_ratio": 0.05,
+    "sonnet_input_million": 3.3,
+    "sonnet_output_million": 16.5,
+    "nova_input_million": 0.06,
+    "nova_output_million": 0.24
+  },
+  "tasks": [
+    {
+      "level": "L1",
+      "share": 0.6,
+      "input": 2000,
+      "output": 400,
+      "model": "Nova Lite",
+      "requests": 211200.0
+    },
+    {
+      "level": "L2",
+      "share": 0.2,
+      "input": 4000,
+      "output": 900,
+      "model": "Nova Lite",
+      "requests": 70400.0
+    },
+    {
+      "level": "L3",
+      "share": 0.1,
+      "input": 6000,
+      "output": 1500,
+      "model": "Claude Sonnet 4.5",
+      "requests": 35200.0
+    },
+    {
+      "level": "L4",
+      "share": 0.09,
+      "input": 9000,
+      "output": 1600,
+      "model": "Claude Sonnet 4.5",
+      "requests": 31680.0
+    },
+    {
+      "level": "L5",
+      "share": 0.01,
+      "input": 2000,
+      "output": 300,
+      "model": "Nova Lite + Nova Canvas",
+      "requests": 3520.0
+    }
+  ],
+  "rows": [
+    [
+      "compute",
+      "Chat streaming Lambda ARM",
+      "us-east-1; 512 MB × 20 s × 352000 × 1.05 staging × 0.0000133334 USD/GB-s + 0.20 USD/M invocation",
+      49.35,
+      "https://aws.amazon.com/lambda/pricing/"
+    ],
+    [
+      "compute",
+      "Background worker và chờ sandbox",
+      "us-east-1; 19% tasks × 352000 × 120 s × 1 GB × 1.05 staging × 0.0000133334 USD/GB-s + invocation; separate trusted worker remains billable while waiting",
+      112.37,
+      "https://aws.amazon.com/lambda/pricing/"
+    ],
+    [
+      "compute",
+      "Provisioned concurrency giờ hành chính",
+      "us-east-1; 10 warm slots × 0.5 GB × 220 h × 3600 × 0.0000033334; execution conservatively billed at on-demand above",
+      13.2,
+      "https://aws.amazon.com/lambda/pricing/"
+    ],
+    [
+      "llm",
+      "Nova Lite: L1/L2/L5",
+      "us-east-1; Cumulative task tokens; 0.06 input / 0.24 output USD per M; 5% retries and 5% staging; no cache discount",
+      86.43,
+      "https://aws.amazon.com/nova/pricing/"
+    ],
+    [
+      "llm",
+      "Sonnet 4.5: L3/L4 và escalation",
+      "us-east-1; US geographic inference; 3.30 input / 16.50 output USD per M; 10% escalation of cheap tasks + 5% retry + 5% staging",
+      4217.87,
+      "https://www-cdn.anthropic.com/files/4zrzovbb/website/3684c2faafb97418665782cea0001f439f74b1d2.pdf"
+    ],
+    [
+      "llm",
+      "Nova Canvas: ảnh 1024 standard",
+      "us-east-1; 3520 images × 0.04 USD × 1.05 retries × 1.05 staging",
+      155.23,
+      "https://aws.amazon.com/nova/pricing/"
+    ],
+    [
+      "gateway",
+      "API Gateway REST + router",
+      "us-east-1; 1000000 API calls × 3.50 USD/M; regional multi-AZ; quota in DynamoDB included in database",
+      3.5,
+      "https://aws.amazon.com/api-gateway/pricing/"
+    ],
+    [
+      "load_balancer",
+      "Managed regional request distribution",
+      "us-east-1; Đã nằm trong API Gateway REST, TLS và multi-AZ routing; không thêm ALB",
+      0.0,
+      "https://aws.amazon.com/api-gateway/pricing/"
+    ],
+    [
+      "authn",
+      "Cognito enterprise federation",
+      "us-east-1; 2000 prod + 100 staging federated MAU × 0.015 USD; MFA at corporate IdP; no allowance deducted",
+      31.5,
+      "https://aws.amazon.com/cognito/pricing/"
+    ],
+    [
+      "authz",
+      "RBAC/ABAC và ACL kiểm tra lại",
+      "us-east-1; Đã nằm trong compute/database: server derives tenant/user, per-document ACL, deny stale ACL",
+      0.0,
+      "https://aws.amazon.com/dynamodb/pricing/on-demand/"
+    ],
+    [
+      "database",
+      "DynamoDB Standard on-demand",
+      "us-east-1; 50 GB × 0.25 + 8M WRU × 0.625/M + 20M RRU × 0.125/M; includes transactional quota/approvals/token vault ciphertext and staging",
+      20.0,
+      "https://aws.amazon.com/dynamodb/pricing/on-demand/"
+    ],
+    [
+      "vector_db",
+      "S3 Vectors storage and ingestion",
+      "us-east-1; 1000000 × (4096+1024+1024+128) bytes / GiB × 0.06 + 20% monthly PUT × 0.20/GB; prod+staging",
+      0.61,
+      "https://aws.amazon.com/s3/pricing/"
+    ],
+    [
+      "vector_db",
+      "S3 Vectors queries",
+      "us-east-1; 300000 queries × (2.50 USD/M + scan 1M vectors, 5248 bytes/vector, tiers 0.004/0.002 USD/TiB); top20 IDs below included return threshold",
+      3.9,
+      "https://aws.amazon.com/s3/pricing/"
+    ],
+    [
+      "object_storage",
+      "Workspace quota đầy đủ + KB + staging",
+      "us-east-1; 2000 × 10 GB + 200 GB KB + 100 GB staging = 20300 GB × 0.023 USD/GB-month",
+      466.9,
+      "https://aws.amazon.com/s3/pricing/"
+    ],
+    [
+      "object_storage",
+      "S3 object requests",
+      "us-east-1; 2000000 PUT/LIST × 0.005/1000 + 10000000 GET × 0.0004/1000",
+      14.0,
+      "https://aws.amazon.com/s3/pricing/"
+    ],
+    [
+      "cache_queue",
+      "SQS + TTL cache",
+      "us-east-1; 3000000 queue API units × 0.40/M; cache in DynamoDB already in database; encrypted queues + DLQ",
+      1.2,
+      "https://aws.amazon.com/sqs/pricing/"
+    ],
+    [
+      "sandbox",
+      "AgentCore Code Interpreter VPC",
+      "us-east-1; 35200 sessions × 120 s × (1 active vCPU × 0.0895/h + 4 GB × 0.00945/h); no assumed idle CPU discount; 5% staging",
+      156.83,
+      "https://aws.amazon.com/bedrock/agentcore/pricing/"
+    ],
+    [
+      "connectors",
+      "Delegated OAuth Lambda workers",
+      "us-east-1; 1000000 calls × 1 GB × 2 s × 0.0000133334 + 0.20/M; connector overhead separately budgeted beyond worker job duration; no full-tenant service account",
+      26.87,
+      "https://aws.amazon.com/lambda/pricing/"
+    ],
+    [
+      "secrets_kms",
+      "KMS và OAuth app secrets",
+      "us-east-1; 2 customer keys × 1 USD + 1M requests × 0.03/10000 + 10 app secrets × 0.40 + 100000 API × 0.05/10000; user refresh tokens envelope-encrypted in DynamoDB",
+      9.5,
+      "https://aws.amazon.com/kms/pricing/"
+    ],
+    [
+      "backup_dr",
+      "PITR + object versions + restore drill",
+      "us-east-1; 50 GB DynamoDB PITR × 0.20 + 4000 GB previous S3 versions × 0.023 + 50 GB monthly backup × 0.10 + 10 GB restore × 0.15; same-region recovery",
+      108.5,
+      "https://aws.amazon.com/dynamodb/pricing/on-demand/"
+    ],
+    [
+      "monitoring",
+      "CloudWatch + S3 audit 12 tháng",
+      "us-east-1; 20 GB ingest × 0.50 + 20 GB logs × 0.03 + 20 metrics × 0.30 + 10 alarms × 0.10 + 240 GB audit S3 × 0.023; audit writes included object requests",
+      23.12,
+      "https://aws.amazon.com/cloudwatch/pricing/"
+    ],
+    [
+      "governance",
+      "DLP/guardrail và eval allowance",
+      "us-east-1; DLP, injection rules and approvals nằm trong compute; 30 USD monthly reference-model eval/review allowance; fail-closed quality gate; not measured quality evidence",
+      30.0,
+      "https://aws.amazon.com/bedrock/pricing/"
+    ],
+    [
+      "network",
+      "Internet egress + regional WAF",
+      "us-east-1; 300 GB internet egress × 0.09 + 5 USD web ACL + 3 rules × 1 + 1M requests × 0.60; isolated sandbox VPC; no NAT or paid interface endpoints",
+      35.6,
+      "https://aws.amazon.com/waf/pricing/"
+    ],
+    [
+      "cicd",
+      "CodeBuild và staging",
+      "us-east-1; 1000 Linux small build minutes × 0.005; IaC/S3 artifacts included object_storage; staging compute/model/db explicitly in respective lines",
+      5.0,
+      "https://aws.amazon.com/codebuild/pricing/"
+    ],
+    [
+      "embedding",
+      "Titan Text Embeddings V2",
+      "us-east-1; 100M monthly ingestion tokens + 20M query tokens × 0.02 USD/M; first index 500M tokens extra 10 USD one-time",
+      2.4,
+      "https://aws.amazon.com/bedrock/pricing/"
+    ],
+    [
+      "ops_labor",
+      "Vận hành và trực giờ hành chính",
+      "us-east-1; 0.10 FTE × 2000 USD/FTE-month; 16 h/month; shared business-hours on-call, not dedicated 24/7",
+      200.0,
+      "NA"
+    ],
+    [
+      "contingency",
+      "Dự phòng biến động tải và đơn giá",
+      "us-east-1; 10% of AWS recurring estimate; not a spending cap; exact SKU evidence still needs capture",
+      557.39,
+      "NA"
+    ]
+  ],
+  "summary": {
+    "monthly_requests": 352000,
+    "input_tokens_million": 1207.3600000000001,
+    "output_tokens_million": 252.384,
+    "peak_rps": 2.6666666666666665,
+    "peak_concurrency": 53.33333333333333,
+    "peak_input_tpm": 548800.0000000001,
+    "peak_output_tpm": 114720.0,
+    "aws_recurring": 5573.88,
+    "labor": 200,
+    "contingency": 557.39,
+    "total": 6331.27,
+    "per_dau": 3.17,
+    "all_reference_total": 11478.78,
+    "sparse_workspace_total": 5875.87,
+    "double_dau_total": 12562.54,
+    "note": "Planning estimate; no AWS resources created, no production quality or latency result. Rate inputs need SKU snapshots before submission."
+  },
+  "sources": {
+    "bedrock": "https://aws.amazon.com/bedrock/pricing/",
+    "nova": "https://aws.amazon.com/nova/pricing/",
+    "lambda": "https://aws.amazon.com/lambda/pricing/",
+    "api": "https://aws.amazon.com/api-gateway/pricing/",
+    "s3": "https://aws.amazon.com/s3/pricing/",
+    "ddb": "https://aws.amazon.com/dynamodb/pricing/on-demand/",
+    "cognito": "https://aws.amazon.com/cognito/pricing/",
+    "agentcore": "https://aws.amazon.com/bedrock/agentcore/pricing/",
+    "sqs": "https://aws.amazon.com/sqs/pricing/",
+    "kms": "https://aws.amazon.com/kms/pricing/",
+    "secrets": "https://aws.amazon.com/secrets-manager/pricing/",
+    "cw": "https://aws.amazon.com/cloudwatch/pricing/",
+    "waf": "https://aws.amazon.com/waf/pricing/",
+    "transfer": "https://aws.amazon.com/ec2/pricing/on-demand/#Data_Transfer",
+    "build": "https://aws.amazon.com/codebuild/pricing/",
+    "budgets": "https://aws.amazon.com/aws-cost-management/aws-budgets/pricing/",
+    "sonnet": "https://www-cdn.anthropic.com/files/4zrzovbb/website/3684c2faafb97418665782cea0001f439f74b1d2.pdf"
+  }
+}

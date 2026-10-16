@@ -1,0 +1,2008 @@
+{
+ "AWSTemplateFormatVersion": "2010-09-09",
+ "Description": "VBot AWS target: multi-AZ managed API, serverless state, pay-per-use inference and isolated per-job code interpreter. Application artifacts and release validation required.",
+ "Metadata": {
+  "AWSToolsMetrics": {
+   "AWSAgentToolkit": "aws-cloudformation@3"
+  },
+  "com.aws.cloudformation.Context": {
+   "arch": "Trusted Lambda control plane outside VPC; untrusted Code Interpreter inside isolated VPC.",
+   "must": [
+    "No live deploy authorized in this design phase",
+    "SSO, ACL, budget and model quality gates before release"
+   ],
+   "ref": [
+    "../docs/ARCHITECTURE.md",
+    "../docs/DEPLOYMENT.md"
+   ]
+  }
+ },
+ "Parameters": {
+  "Environment": {
+   "Type": "String",
+   "AllowedValues": [
+    "prod",
+    "staging"
+   ],
+   "Default": "staging"
+  },
+  "BudgetEmail": {
+   "Type": "String",
+   "AllowedPattern": "[^@ ]+@[^@ ]+\\.[^@ ]+"
+  },
+  "SamlMetadataUrl": {
+   "Type": "String",
+   "AllowedPattern": "https://.+"
+  },
+  "CallbackUrl": {
+   "Type": "String",
+   "AllowedPattern": "https://.+"
+  },
+  "CodeBucket": {
+   "Type": "String",
+   "AllowedPattern": "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]"
+  },
+  "ChatCodeKey": {
+   "Type": "String",
+   "AllowedPattern": ".+\\.zip"
+  },
+  "WorkerCodeKey": {
+   "Type": "String",
+   "AllowedPattern": ".+\\.zip"
+  },
+  "ChatCodeSha256": {
+   "Type": "String",
+   "AllowedPattern": "[A-Za-z0-9+/]{43}="
+  },
+  "ConnectorSecretArns": {
+   "Type": "CommaDelimitedList",
+   "Description": "Existing application OAuth client secret ARNs; never provide secret values."
+  }
+ },
+ "Conditions": {
+  "IsProd": {
+   "Fn::Equals": [
+    {
+     "Ref": "Environment"
+    },
+    "prod"
+   ]
+  }
+ },
+ "Resources": {
+  "VaultKey": {
+   "Type": "AWS::KMS::Key",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Envelope encryption of delegated user refresh tokens; root policy permits IAM delegation.",
+     "must": [
+      "No plaintext refresh tokens in table or logs"
+     ]
+    }
+   },
+   "Properties": {
+    "EnableKeyRotation": true,
+    "KeyPolicy": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+        }
+       },
+       "Action": "kms:*",
+       "Resource": "*"
+      }
+     ]
+    }
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "Workspace": {
+   "Type": "AWS::S3::Bucket",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Private user files",
+     "must": [
+      "Block public access; TLS only; retain data on stack deletion"
+     ]
+    }
+   },
+   "Properties": {
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "IgnorePublicAcls": true,
+     "BlockPublicPolicy": true,
+     "RestrictPublicBuckets": true
+    },
+    "OwnershipControls": {
+     "Rules": [
+      {
+       "ObjectOwnership": "BucketOwnerEnforced"
+      }
+     ]
+    },
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "ExpireOldVersions",
+       "Status": "Enabled",
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+       }
+      },
+      {
+       "Id": "AbortIncomplete",
+       "Status": "Enabled",
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+       }
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "WorkspacePolicy": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Deny unencrypted transport for all clients",
+     "must": [
+      "No public access grant"
+     ]
+    }
+   },
+   "Properties": {
+    "Bucket": {
+     "Ref": "Workspace"
+    },
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Workspace",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${Workspace.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Audit": {
+   "Type": "AWS::S3::Bucket",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Immutable audit objects retained >=12 months",
+     "must": [
+      "Block public access; TLS only; retain data on stack deletion"
+     ]
+    }
+   },
+   "Properties": {
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "IgnorePublicAcls": true,
+     "BlockPublicPolicy": true,
+     "RestrictPublicBuckets": true
+    },
+    "OwnershipControls": {
+     "Rules": [
+      {
+       "ObjectOwnership": "BucketOwnerEnforced"
+      }
+     ]
+    },
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    },
+    "ObjectLockEnabled": true,
+    "ObjectLockConfiguration": {
+     "ObjectLockEnabled": "Enabled",
+     "Rule": {
+      "DefaultRetention": {
+       "Mode": "COMPLIANCE",
+       "Days": 366
+      }
+     }
+    },
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "AuditPolicy": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Deny unencrypted transport for all clients",
+     "must": [
+      "No public access grant"
+     ]
+    }
+   },
+   "Properties": {
+    "Bucket": {
+     "Ref": "Audit"
+    },
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Audit",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${Audit.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "State": {
+   "Type": "AWS::DynamoDB::Table",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Key-based chat metadata, approvals, ACL snapshots, quota reservations and encrypted vault; managed multi-AZ.",
+     "must": [
+      "Application must verify expiry; TTL deletion is asynchronous",
+      "pk derived from authenticated identity; never trust tenant in request body"
+     ]
+    }
+   },
+   "Properties": {
+    "BillingMode": "PAY_PER_REQUEST",
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "pk",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "sk",
+      "AttributeType": "S"
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "pk",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "sk",
+      "KeyType": "RANGE"
+     }
+    ],
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "TimeToLiveSpecification": {
+     "AttributeName": "expires_at",
+     "Enabled": true
+    },
+    "DeletionProtectionEnabled": true,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "Vectors": {
+   "Type": "AWS::S3Vectors::VectorBucket",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Pay-per-use vector persistence instead of an always-running search cluster.",
+     "must": [
+      "All queries pass server authorization; no direct client access"
+     ]
+    }
+   },
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "KnowledgeIndex": {
+   "Type": "AWS::S3Vectors::Index",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Custom retrieval with ACL filters and live source ACL recheck, not a managed full-tenant crawler.",
+     "must": [
+      "Embedding dimension must match; no retrieved text goes to model until ACL recheck"
+     ]
+    }
+   },
+   "Properties": {
+    "VectorBucketArn": {
+     "Ref": "Vectors"
+    },
+    "DataType": "float32",
+    "Dimension": 1024,
+    "DistanceMetric": "cosine",
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "DeadLetters": {
+   "Type": "AWS::SQS::Queue",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Quarantine poison async work.",
+     "must": [
+      "No OAuth tokens or PII in queue body"
+     ]
+    }
+   },
+   "Properties": {
+    "SqsManagedSseEnabled": true,
+    "MessageRetentionPeriod": 1209600,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "Jobs": {
+   "Type": "AWS::SQS::Queue",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Async background jobs carry only authorized object/job pointers.",
+     "must": [
+      "Idempotent consumers; explicit external-write approval; 10-minute job deadline"
+     ]
+    }
+   },
+   "Properties": {
+    "SqsManagedSseEnabled": true,
+    "VisibilityTimeout": 3600,
+    "MessageRetentionPeriod": 86400,
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "DeadLetters",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 3
+    },
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "QueuePolicy": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Require TLS for queue access.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "Queues": [
+     {
+      "Ref": "Jobs"
+     },
+     {
+      "Ref": "DeadLetters"
+     }
+    ],
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "sqs:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Jobs",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::GetAtt": [
+          "DeadLetters",
+          "Arn"
+         ]
+        }
+       ],
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "SandboxVpc": {
+   "Type": "AWS::EC2::VPC",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Dedicated sandbox network with no IGW, NAT, peering, endpoints or DNS resolver.",
+     "must": [
+      "Never attach corporate/private resources or outbound routes",
+      "Disabling VPC DNS closes the resolver path that security groups do not filter"
+     ]
+    }
+   },
+   "Properties": {
+    "CidrBlock": "10.88.0.0/24",
+    "EnableDnsSupport": false,
+    "EnableDnsHostnames": false,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "SandboxSubnetA": {
+   "Type": "AWS::EC2::Subnet",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Isolated subnet in an independent AZ.",
+     "must": [
+      "Local-only routes"
+     ]
+    }
+   },
+   "Properties": {
+    "VpcId": {
+     "Ref": "SandboxVpc"
+    },
+    "CidrBlock": "10.88.0.0/26",
+    "AvailabilityZone": {
+     "Fn::Select": [
+      0,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "SandboxSubnetB": {
+   "Type": "AWS::EC2::Subnet",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Isolated subnet in an independent AZ.",
+     "must": [
+      "Local-only routes"
+     ]
+    }
+   },
+   "Properties": {
+    "VpcId": {
+     "Ref": "SandboxVpc"
+    },
+    "CidrBlock": "10.88.0.64/26",
+    "AvailabilityZone": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "SandboxGroup": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Block outbound paths by default; do not use the permissive default SG.",
+     "must": [
+      "No usable egress; no DNS via Amazon resolver"
+     ]
+    }
+   },
+   "Properties": {
+    "GroupDescription": "No ingress; egress only to nonexistent localhost destination",
+    "VpcId": {
+     "Ref": "SandboxVpc"
+    },
+    "SecurityGroupEgress": [
+     {
+      "IpProtocol": "-1",
+      "CidrIp": "127.0.0.1/32",
+      "Description": "Explicit inert rule prevents AWS default allow-all egress"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "Interpreter": {
+   "Type": "AWS::BedrockAgentCore::CodeInterpreterCustom",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Per-job isolated code session; controller uploads/downloads files over AgentCore tools.",
+     "must": [
+      "No execution role exposing OAuth, database or user-bucket access",
+      "Controller stops session in finally, sets timeout <=600s and checks ownership"
+     ]
+    }
+   },
+   "Properties": {
+    "Name": {
+     "Fn::Sub": "vbot_${Environment}_interpreter"
+    },
+    "NetworkConfiguration": {
+     "NetworkMode": "VPC",
+     "VpcConfig": {
+      "Subnets": [
+       {
+        "Ref": "SandboxSubnetA"
+       },
+       {
+        "Ref": "SandboxSubnetB"
+       }
+      ],
+      "SecurityGroups": [
+       {
+        "Ref": "SandboxGroup"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "UserPool": {
+   "Type": "AWS::Cognito::UserPool",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Enterprise SSO federation; MFA must be enforced at corporate IdP.",
+     "must": [
+      "Local password signup disabled; validate IdP MFA policy"
+     ]
+    }
+   },
+   "Properties": {
+    "UserPoolName": {
+     "Fn::Sub": "${AWS::StackName}-users"
+    },
+    "UserPoolTier": "ESSENTIALS",
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": true
+    },
+    "Schema": [
+     {
+      "Name": "email",
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Required": true
+     }
+    ],
+    "DeletionProtection": "ACTIVE"
+   },
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain"
+  },
+  "CorporateIdP": {
+   "Type": "AWS::Cognito::UserPoolIdentityProvider",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Federate SAML enterprise identity; metadata must map stable subject and MFA.",
+     "must": [
+      "Metadata URL belongs to approved corporate IdP"
+     ]
+    }
+   },
+   "Properties": {
+    "UserPoolId": {
+     "Ref": "UserPool"
+    },
+    "ProviderName": "Corporate",
+    "ProviderType": "SAML",
+    "ProviderDetails": {
+     "MetadataURL": {
+      "Ref": "SamlMetadataUrl"
+     }
+    },
+    "AttributeMapping": {
+     "email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+    }
+   }
+  },
+  "ApiScopes": {
+   "Type": "AWS::Cognito::UserPoolResourceServer",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Require access tokens carrying a scoped API permission.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "UserPoolId": {
+     "Ref": "UserPool"
+    },
+    "Identifier": "vbot",
+    "Name": "vbot",
+    "Scopes": [
+     {
+      "ScopeName": "chat",
+      "ScopeDescription": "Access workplace assistant"
+     }
+    ]
+   }
+  },
+  "Client": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Browser OAuth authorization-code flow with PKCE.",
+     "must": [
+      "Frontend must supply PKCE S256; exact HTTPS callback only"
+     ]
+    }
+   },
+   "Properties": {
+    "UserPoolId": {
+     "Ref": "UserPool"
+    },
+    "GenerateSecret": false,
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthFlows": [
+     "code"
+    ],
+    "AllowedOAuthScopes": [
+     "openid",
+     "email",
+     "vbot/chat"
+    ],
+    "SupportedIdentityProviders": [
+     "Corporate"
+    ],
+    "CallbackURLs": [
+     {
+      "Ref": "CallbackUrl"
+     }
+    ],
+    "EnableTokenRevocation": true,
+    "PreventUserExistenceErrors": "ENABLED",
+    "AccessTokenValidity": 15,
+    "TokenValidityUnits": {
+     "AccessToken": "minutes"
+    }
+   },
+   "DependsOn": [
+    "CorporateIdP",
+    "ApiScopes"
+   ]
+  },
+  "LoginDomain": {
+   "Type": "AWS::Cognito::UserPoolDomain",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Managed SSO redirect endpoint.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "UserPoolId": {
+     "Ref": "UserPool"
+    },
+    "Domain": {
+     "Fn::Sub": "${AWS::AccountId}-${AWS::StackName}"
+    }
+   }
+  },
+  "ChatLogs": {
+   "Type": "AWS::Logs::LogGroup",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Operational metadata only; immutable audit events go to S3.",
+     "must": [
+      "Never log raw prompt, document, OAuth token or secret"
+     ]
+    }
+   },
+   "Properties": {
+    "RetentionInDays": 30,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "WorkerLogs": {
+   "Type": "AWS::Logs::LogGroup",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Operational metadata only; immutable audit events go to S3.",
+     "must": [
+      "Never log raw prompt, document, OAuth token or secret"
+     ]
+    }
+   },
+   "Properties": {
+    "RetentionInDays": 30,
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "ChatRole": {
+   "Type": "AWS::IAM::Role",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Separate trusted runtime role; resource-scoped capabilities.",
+     "must": [
+      "No role or credentials passed into untrusted sandbox",
+      "Cross-region Bedrock limited to US destination regions; model allowlist in application"
+     ]
+    }
+   },
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       },
+       "Action": "sts:AssumeRole"
+      }
+     ]
+    },
+    "Policies": [
+     {
+      "PolicyName": "RuntimeResources",
+      "PolicyDocument": {
+       "Version": "2012-10-17",
+       "Statement": [
+        {
+         "Effect": "Allow",
+         "Action": [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query",
+          "dynamodb:ConditionCheckItem"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "State",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "s3:GetObject",
+          "s3:PutObject"
+         ],
+         "Resource": {
+          "Fn::Sub": "${Workspace.Arn}/*"
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": "s3:PutObject",
+         "Resource": {
+          "Fn::Sub": "${Audit.Arn}/*"
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "VaultKey",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "s3vectors:QueryVectors",
+          "s3vectors:GetVectors",
+          "s3vectors:PutVectors",
+          "s3vectors:DeleteVectors"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "KnowledgeIndex",
+           "IndexArn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "ChatLogs",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+         ],
+         "Resource": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/amazon.nova-lite-v1:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/amazon.nova-canvas-v1:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.*"
+          }
+         ],
+         "Condition": {
+          "StringEquals": {
+           "aws:RequestedRegion": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+           ]
+          }
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": "sqs:SendMessage",
+         "Resource": {
+          "Fn::GetAtt": [
+           "Jobs",
+           "Arn"
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "WorkerRole": {
+   "Type": "AWS::IAM::Role",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Separate trusted runtime role; resource-scoped capabilities.",
+     "must": [
+      "No role or credentials passed into untrusted sandbox",
+      "Cross-region Bedrock limited to US destination regions; model allowlist in application"
+     ]
+    }
+   },
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       },
+       "Action": "sts:AssumeRole"
+      }
+     ]
+    },
+    "Policies": [
+     {
+      "PolicyName": "RuntimeResources",
+      "PolicyDocument": {
+       "Version": "2012-10-17",
+       "Statement": [
+        {
+         "Effect": "Allow",
+         "Action": [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query",
+          "dynamodb:ConditionCheckItem"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "State",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "s3:GetObject",
+          "s3:PutObject"
+         ],
+         "Resource": {
+          "Fn::Sub": "${Workspace.Arn}/*"
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": "s3:PutObject",
+         "Resource": {
+          "Fn::Sub": "${Audit.Arn}/*"
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "VaultKey",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "s3vectors:QueryVectors",
+          "s3vectors:GetVectors",
+          "s3vectors:PutVectors",
+          "s3vectors:DeleteVectors"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "KnowledgeIndex",
+           "IndexArn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "WorkerLogs",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+         ],
+         "Resource": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/amazon.nova-lite-v1:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/amazon.nova-canvas-v1:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:*::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.*"
+          }
+         ],
+         "Condition": {
+          "StringEquals": {
+           "aws:RequestedRegion": [
+            "us-east-1",
+            "us-east-2",
+            "us-west-2"
+           ]
+          }
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:ChangeMessageVisibility"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "Jobs",
+           "Arn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": [
+          "bedrock-agentcore:StartCodeInterpreterSession",
+          "bedrock-agentcore:InvokeCodeInterpreter",
+          "bedrock-agentcore:StopCodeInterpreterSession",
+          "bedrock-agentcore:GetCodeInterpreterSession"
+         ],
+         "Resource": {
+          "Fn::GetAtt": [
+           "Interpreter",
+           "CodeInterpreterArn"
+          ]
+         }
+        },
+        {
+         "Effect": "Allow",
+         "Action": "secretsmanager:GetSecretValue",
+         "Resource": {
+          "Ref": "ConnectorSecretArns"
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "Chat": {
+   "Type": "AWS::Lambda::Function",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Deploy reviewed application artifact supplied separately; release disabled until gates pass.",
+     "must": [
+      "No inline placeholder business logic",
+      "Streaming chat uses awslambda.streamifyResponse; workers enforce deadline and idempotency"
+     ]
+    }
+   },
+   "Properties": {
+    "Runtime": "nodejs22.x",
+    "Architectures": [
+     "arm64"
+    ],
+    "Handler": "index.handler",
+    "MemorySize": 512,
+    "Timeout": 120,
+    "ReservedConcurrentExecutions": 100,
+    "Role": {
+     "Fn::GetAtt": [
+      "ChatRole",
+      "Arn"
+     ]
+    },
+    "Code": {
+     "S3Bucket": {
+      "Ref": "CodeBucket"
+     },
+     "S3Key": {
+      "Ref": "ChatCodeKey"
+     }
+    },
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "ChatLogs"
+     }
+    },
+    "Environment": {
+     "Variables": {
+      "STATE_TABLE": {
+       "Ref": "State"
+      },
+      "WORKSPACE_BUCKET": {
+       "Ref": "Workspace"
+      },
+      "AUDIT_BUCKET": {
+       "Ref": "Audit"
+      },
+      "VAULT_KEY_ID": {
+       "Ref": "VaultKey"
+      },
+      "VECTOR_INDEX_ARN": {
+       "Fn::GetAtt": [
+        "KnowledgeIndex",
+        "IndexArn"
+       ]
+      },
+      "JOB_QUEUE_URL": {
+       "Ref": "Jobs"
+      },
+      "INTERPRETER_ID": {
+       "Fn::GetAtt": [
+        "Interpreter",
+        "CodeInterpreterId"
+       ]
+      },
+      "MAX_JOB_SECONDS": "600",
+      "MAX_USER_STORAGE_BYTES": "10000000000",
+      "DAILY_USER_TASK_LIMIT": "16",
+      "MONTHLY_MODEL_BUDGET_USD": "4500",
+      "RELEASE_ENABLED": "false"
+     }
+    },
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "Worker": {
+   "Type": "AWS::Lambda::Function",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Deploy reviewed application artifact supplied separately; release disabled until gates pass.",
+     "must": [
+      "No inline placeholder business logic",
+      "Streaming chat uses awslambda.streamifyResponse; workers enforce deadline and idempotency"
+     ]
+    }
+   },
+   "Properties": {
+    "Runtime": "nodejs22.x",
+    "Architectures": [
+     "arm64"
+    ],
+    "Handler": "index.handler",
+    "MemorySize": 1024,
+    "Timeout": 600,
+    "ReservedConcurrentExecutions": 20,
+    "Role": {
+     "Fn::GetAtt": [
+      "WorkerRole",
+      "Arn"
+     ]
+    },
+    "Code": {
+     "S3Bucket": {
+      "Ref": "CodeBucket"
+     },
+     "S3Key": {
+      "Ref": "WorkerCodeKey"
+     }
+    },
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "WorkerLogs"
+     }
+    },
+    "Environment": {
+     "Variables": {
+      "STATE_TABLE": {
+       "Ref": "State"
+      },
+      "WORKSPACE_BUCKET": {
+       "Ref": "Workspace"
+      },
+      "AUDIT_BUCKET": {
+       "Ref": "Audit"
+      },
+      "VAULT_KEY_ID": {
+       "Ref": "VaultKey"
+      },
+      "VECTOR_INDEX_ARN": {
+       "Fn::GetAtt": [
+        "KnowledgeIndex",
+        "IndexArn"
+       ]
+      },
+      "JOB_QUEUE_URL": {
+       "Ref": "Jobs"
+      },
+      "INTERPRETER_ID": {
+       "Fn::GetAtt": [
+        "Interpreter",
+        "CodeInterpreterId"
+       ]
+      },
+      "MAX_JOB_SECONDS": "600",
+      "MAX_USER_STORAGE_BYTES": "10000000000",
+      "DAILY_USER_TASK_LIMIT": "16",
+      "MONTHLY_MODEL_BUDGET_USD": "4500",
+      "RELEASE_ENABLED": "false"
+     }
+    },
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "WorkerEvents": {
+   "Type": "AWS::Lambda::EventSourceMapping",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Bound background concurrency and preserve per-job deadline.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "EventSourceArn": {
+     "Fn::GetAtt": [
+      "Jobs",
+      "Arn"
+     ]
+    },
+    "FunctionName": {
+     "Ref": "Worker"
+    },
+    "BatchSize": 1,
+    "FunctionResponseTypes": [
+     "ReportBatchItemFailures"
+    ],
+    "ScalingConfig": {
+     "MaximumConcurrency": 10
+    }
+   }
+  },
+  "ChatVersion": {
+   "Type": "AWS::Lambda::Version",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Immutable build version pinned to uploaded ZIP digest.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "FunctionName": {
+     "Ref": "Chat"
+    },
+    "CodeSha256": {
+     "Ref": "ChatCodeSha256"
+    }
+   }
+  },
+  "Live": {
+   "Type": "AWS::Lambda::Alias",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Stable integration alias for controlled releases.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "Name": "live",
+    "FunctionName": {
+     "Ref": "Chat"
+    },
+    "FunctionVersion": {
+     "Fn::GetAtt": [
+      "ChatVersion",
+      "Version"
+     ]
+    }
+   }
+  },
+  "ScaleRole": {
+   "Type": "AWS::IAM::Role",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Only schedule warm capacity on the chat alias.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "application-autoscaling.amazonaws.com"
+       },
+       "Action": "sts:AssumeRole"
+      }
+     ]
+    },
+    "Policies": [
+     {
+      "PolicyName": "WarmAlias",
+      "PolicyDocument": {
+       "Version": "2012-10-17",
+       "Statement": [
+        {
+         "Effect": "Allow",
+         "Action": [
+          "lambda:PutProvisionedConcurrencyConfig",
+          "lambda:DeleteProvisionedConcurrencyConfig",
+          "lambda:GetProvisionedConcurrencyConfig"
+         ],
+         "Resource": {
+          "Ref": "Live"
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "WarmCapacity": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Warm 10 slots before 08:00 GMT+7; off after 18:00. Ten extra warm-up minutes priced as contingency.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "MinCapacity": 0,
+    "MaxCapacity": 10,
+    "ResourceId": {
+     "Fn::Sub": "function:${Chat}:live"
+    },
+    "RoleARN": {
+     "Fn::GetAtt": [
+      "ScaleRole",
+      "Arn"
+     ]
+    },
+    "ScalableDimension": "lambda:function:ProvisionedConcurrency",
+    "ServiceNamespace": "lambda",
+    "ScheduledActions": [
+     {
+      "ScheduledActionName": "BusinessStart",
+      "Schedule": "cron(50 0 ? * MON-FRI *)",
+      "ScalableTargetAction": {
+       "MinCapacity": 10,
+       "MaxCapacity": 10
+      }
+     },
+     {
+      "ScheduledActionName": "BusinessEnd",
+      "Schedule": "cron(0 11 ? * MON-FRI *)",
+      "ScalableTargetAction": {
+       "MinCapacity": 0,
+       "MaxCapacity": 0
+      }
+     }
+    ]
+   },
+   "Condition": "IsProd"
+  },
+  "Api": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Managed multi-AZ TLS gateway and load distribution; REST required for streaming.",
+     "must": [
+      "Do not replace with HTTP API without proving streaming path"
+     ]
+    }
+   },
+   "Properties": {
+    "Name": {
+     "Fn::Sub": "${AWS::StackName}-api"
+    },
+    "EndpointConfiguration": {
+     "Types": [
+      "REGIONAL"
+     ]
+    }
+   }
+  },
+  "Authorizer": {
+   "Type": "AWS::ApiGateway::Authorizer",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Validate SSO access tokens before application execution.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "Name": "Cognito",
+    "Type": "COGNITO_USER_POOLS",
+    "RestApiId": {
+     "Ref": "Api"
+    },
+    "IdentitySource": "method.request.header.Authorization",
+    "ProviderARNs": [
+     {
+      "Fn::GetAtt": [
+       "UserPool",
+       "Arn"
+      ]
+     }
+    ]
+   }
+  },
+  "ChatPath": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Streaming chat endpoint.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "RestApiId": {
+     "Ref": "Api"
+    },
+    "ParentId": {
+     "Fn::GetAtt": [
+      "Api",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "chat"
+   }
+  },
+  "ChatMethod": {
+   "Type": "AWS::ApiGateway::Method",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Stream model output through the managed gateway.",
+     "must": [
+      "Guardrail streamed text before emitting chunks; no sensitive prefix leak"
+     ]
+    }
+   },
+   "Properties": {
+    "RestApiId": {
+     "Ref": "Api"
+    },
+    "ResourceId": {
+     "Ref": "ChatPath"
+    },
+    "HttpMethod": "POST",
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "Authorizer"
+    },
+    "AuthorizationScopes": [
+     "vbot/chat"
+    ],
+    "Integration": {
+     "Type": "AWS_PROXY",
+     "IntegrationHttpMethod": "POST",
+     "ResponseTransferMode": "STREAM",
+     "TimeoutInMillis": 120000,
+     "Uri": {
+      "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2021-11-15/functions/${Live}/response-streaming-invocations"
+     }
+    }
+   }
+  },
+  "InvokePermission": {
+   "Type": "AWS::Lambda::Permission",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Only this API can invoke the alias.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "FunctionName": {
+     "Ref": "Live"
+    },
+    "Action": "lambda:InvokeFunction",
+    "Principal": "apigateway.amazonaws.com",
+    "SourceAccount": {
+     "Ref": "AWS::AccountId"
+    },
+    "SourceArn": {
+     "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*/POST/chat"
+    }
+   }
+  },
+  "Deployment": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Immutable gateway deployment; logical ID must change when methods change.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "RestApiId": {
+     "Ref": "Api"
+    }
+   },
+   "DependsOn": [
+    "ChatMethod"
+   ]
+  },
+  "Stage": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Bound external traffic; application still enforces per-user budget.",
+     "must": [
+      "No request body data tracing"
+     ]
+    }
+   },
+   "Properties": {
+    "RestApiId": {
+     "Ref": "Api"
+    },
+    "DeploymentId": {
+     "Ref": "Deployment"
+    },
+    "StageName": {
+     "Ref": "Environment"
+    },
+    "MethodSettings": [
+     {
+      "HttpMethod": "*",
+      "ResourcePath": "/*",
+      "ThrottlingRateLimit": 5,
+      "ThrottlingBurstLimit": 20,
+      "DataTraceEnabled": false
+     }
+    ]
+   }
+  },
+  "Firewall": {
+   "Type": "AWS::WAFv2::WebACL",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Rate-limit abusive clients without storing sampled sensitive requests.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "Scope": "REGIONAL",
+    "DefaultAction": {
+     "Allow": {}
+    },
+    "VisibilityConfig": {
+     "SampledRequestsEnabled": false,
+     "CloudWatchMetricsEnabled": true,
+     "MetricName": "VBotWaf"
+    },
+    "Rules": [
+     {
+      "Name": "IpRate",
+      "Priority": 0,
+      "Action": {
+       "Block": {}
+      },
+      "Statement": {
+       "RateBasedStatement": {
+        "Limit": 300,
+        "AggregateKeyType": "IP"
+       }
+      },
+      "VisibilityConfig": {
+       "SampledRequestsEnabled": false,
+       "CloudWatchMetricsEnabled": true,
+       "MetricName": "IpRate"
+      }
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Project",
+      "Value": {
+       "Ref": "AWS::StackName"
+      }
+     },
+     {
+      "Key": "Environment",
+      "Value": {
+       "Ref": "Environment"
+      }
+     }
+    ]
+   }
+  },
+  "FirewallBinding": {
+   "Type": "AWS::WAFv2::WebACLAssociation",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Attach the regional WAF directly to the gateway.",
+     "must": []
+    }
+   },
+   "Properties": {
+    "WebACLArn": {
+     "Fn::GetAtt": [
+      "Firewall",
+      "Arn"
+     ]
+    },
+    "ResourceArn": {
+     "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}::/restapis/${Api}/stages/${Environment}"
+    }
+   },
+   "DependsOn": [
+    "Stage"
+   ]
+  },
+  "Budget": {
+   "Type": "AWS::Budgets::Budget",
+   "Metadata": {
+    "com.aws.cloudformation.Context": {
+     "why": "Advisory tagged cost budget; hard cutoff must be enforced by request ledger.",
+     "must": [
+      "Activate Project cost allocation tag; budget is delayed and is not an immediate spending cap"
+     ]
+    }
+   },
+   "Properties": {
+    "Budget": {
+     "BudgetName": {
+      "Fn::Sub": "${AWS::StackName}-monthly"
+     },
+     "BudgetType": "COST",
+     "TimeUnit": "MONTHLY",
+     "BudgetLimit": {
+      "Amount": 6500,
+      "Unit": "USD"
+     },
+     "CostFilters": {
+      "TagKeyValue": [
+       {
+        "Fn::Sub": "user:Project$${AWS::StackName}"
+       }
+      ]
+     }
+    },
+    "NotificationsWithSubscribers": [
+     {
+      "Notification": {
+       "NotificationType": "ACTUAL",
+       "ComparisonOperator": "GREATER_THAN",
+       "Threshold": 80,
+       "ThresholdType": "PERCENTAGE"
+      },
+      "Subscribers": [
+       {
+        "SubscriptionType": "EMAIL",
+        "Address": {
+         "Ref": "BudgetEmail"
+        }
+       }
+      ]
+     },
+     {
+      "Notification": {
+       "NotificationType": "ACTUAL",
+       "ComparisonOperator": "GREATER_THAN",
+       "Threshold": 100,
+       "ThresholdType": "PERCENTAGE"
+      },
+      "Subscribers": [
+       {
+        "SubscriptionType": "EMAIL",
+        "Address": {
+         "Ref": "BudgetEmail"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "Outputs": {
+  "ApiUrl": {
+   "Description": "Authenticated streaming endpoint",
+   "Value": {
+    "Fn::Sub": "https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/chat"
+   }
+  },
+  "ClientId": {
+   "Description": "Public PKCE client",
+   "Value": {
+    "Ref": "Client"
+   }
+  },
+  "WorkspaceBucket": {
+   "Description": "Private file store",
+   "Value": {
+    "Ref": "Workspace"
+   }
+  },
+  "StateTable": {
+   "Description": "Key-based application state",
+   "Value": {
+    "Ref": "State"
+   }
+  },
+  "InterpreterId": {
+   "Description": "Controller starts fresh per-job session here",
+   "Value": {
+    "Fn::GetAtt": [
+     "Interpreter",
+     "CodeInterpreterId"
+    ]
+   }
+  }
+ }
+}
